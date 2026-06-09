@@ -16,9 +16,10 @@ import {
   ListTodo,
   ExternalLink,
   RefreshCw,
-  Image
+  Image,
+  Library
 } from "lucide-react";
-import { CHIPS, PIPELINE_STEPS, PROVIDERS, generateContent, generateSVG, refineContent } from "./utils/ai";
+import { CHIPS, PIPELINE_STEPS, PROVIDERS, generateContent, generateSVG, refineContent, fetchWikiDiagrams } from "./utils/ai";
 import InteractiveSvg from "./components/InteractiveSvg";
 
 export default function App() {
@@ -44,6 +45,9 @@ export default function App() {
   const [imageLoading, setImageLoading] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [pollinationsKey, setPollinationsKey] = useState("");
+  const [wikiDiagrams, setWikiDiagrams] = useState([]);
+  const [wikiLoading, setWikiLoading] = useState(false);
+  const [selectedWikiImg, setSelectedWikiImg] = useState(null);
   const [history, setHistory] = useState([]);
   
   // Refinement Follow-up
@@ -121,6 +125,8 @@ export default function App() {
     setData(null);
     setSvgDiagram(null);
     setGeneratedImage("");
+    setWikiDiagrams([]);
+    setSelectedWikiImg(null);
     setPipelineState({});
     setStatusMsg(`Establishing connection to ${PROVIDERS[provider].name}...`);
 
@@ -147,6 +153,14 @@ export default function App() {
       } else {
         setGeneratedImage("");
       }
+
+      // Fetch Verified Wiki Diagrams
+      setWikiLoading(true);
+      fetchWikiDiagrams(responseData.topic)
+        .then(diagrams => setWikiDiagrams(diagrams))
+        .catch(err => console.error("Failed to load Wiki diagrams:", err))
+        .finally(() => setWikiLoading(false));
+
       updatePipelineState("gen", "done");
 
       // Step 3: SVG Design
@@ -198,6 +212,14 @@ export default function App() {
         const keyParam = pollinationsKey ? `&key=${encodeURIComponent(pollinationsKey)}` : "";
         setGeneratedImage(`https://image.pollinations.ai/prompt/${encodeURIComponent(refinedData.image_prompt)}?width=800&height=500&nologo=true&seed=${newSeed}${keyParam}`);
       }
+      
+      // Re-fetch Verified Wiki Diagrams
+      setWikiLoading(true);
+      fetchWikiDiagrams(refinedData.topic)
+        .then(diagrams => setWikiDiagrams(diagrams))
+        .catch(err => console.error("Failed to load Wiki diagrams:", err))
+        .finally(() => setWikiLoading(false));
+
       setRefinePrompt("");
     } catch (err) {
       setError(`Refinement failed: ${err.message}`);
@@ -552,6 +574,7 @@ export default function App() {
                 {[
                   { id: "concept", label: "Core Concept", icon: <BookOpen size={16} /> },
                   { id: "diagram", label: "Interactive Diagram", icon: <Globe size={16} /> },
+                  { id: "wiki", label: "Textbook Database", icon: <Library size={16} /> },
                   { id: "illustration", label: "AI Illustration", icon: <Image size={16} /> },
                   { id: "roadmap", label: "Roadmap & Application", icon: <Compass size={16} /> },
                   { id: "test", label: "Practice & Review", icon: <HelpCircle size={16} /> }
@@ -628,6 +651,162 @@ export default function App() {
                          <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)" }}>Diagram creation failed or was skipped during execution.</p>
                        </div>
                      )}
+                  </div>
+                )}
+
+                {/* 3. Textbook Database (Wikimedia Commons) */}
+                {activeTab === "wiki" && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+                    <div className="glass-card" style={{ background: "rgba(99, 102, 241, 0.04)", border: "1px solid rgba(99, 102, 241, 0.2)" }}>
+                      <h3 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#FFF", marginBottom: "0.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <Library size={18} style={{ color: "var(--primary)" }} /> Real Textbook & NCERT Diagrams
+                      </h3>
+                      <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: "1.5" }}>
+                        These high-quality verified diagrams are dynamically fetched from the Wikimedia Commons archive based on your topic. Unlike AI-generated images, these are real, human-made illustrations suitable for 6th to 12th Standard NCERT study notes.
+                      </p>
+                    </div>
+
+                    {wikiLoading ? (
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "1.25rem" }}>
+                        {[1, 2, 3, 4].map(n => (
+                          <div key={n} className="skeleton skeleton-rect" style={{ height: "180px", borderRadius: "10px" }} />
+                        ))}
+                      </div>
+                    ) : wikiDiagrams.length > 0 ? (
+                      <div>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "1.25rem" }}>
+                          {wikiDiagrams.map((diag) => (
+                            <div 
+                              key={diag.id} 
+                              className="glass-card" 
+                              onClick={() => setSelectedWikiImg(diag)}
+                              style={{ 
+                                cursor: "pointer", 
+                                padding: "0.5rem", 
+                                display: "flex", 
+                                flexDirection: "column", 
+                                gap: "0.5rem", 
+                                background: "#111827",
+                                overflow: "hidden"
+                              }}
+                            >
+                              <div style={{ 
+                                height: "150px", 
+                                display: "flex", 
+                                alignItems: "center", 
+                                justifyContent: "center", 
+                                background: "rgba(255,255,255,0.02)",
+                                borderRadius: "6px",
+                                overflow: "hidden"
+                              }}>
+                                <img 
+                                  src={diag.url} 
+                                  alt={diag.title} 
+                                  style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
+                                  loading="lazy"
+                                />
+                              </div>
+                              <span style={{ 
+                                fontSize: "0.75rem", 
+                                fontWeight: 500, 
+                                color: "var(--text-primary)", 
+                                whiteSpace: "nowrap", 
+                                overflow: "hidden", 
+                                textOverflow: "ellipsis",
+                                padding: "0 0.25rem"
+                              }} title={diag.title}>
+                                {diag.title}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Large Preview Modal */}
+                        {selectedWikiImg && (
+                          <div style={{ 
+                            position: "fixed", 
+                            top: 0, 
+                            left: 0, 
+                            right: 0, 
+                            bottom: 0, 
+                            background: "rgba(0,0,0,0.85)", 
+                            backdropFilter: "blur(4px)", 
+                            display: "flex", 
+                            alignItems: "center", 
+                            justifyContent: "center", 
+                            zIndex: 100,
+                            padding: "2rem"
+                          }} onClick={() => setSelectedWikiImg(null)}>
+                            <div className="glass-card" style={{ 
+                              background: "var(--bg-main)", 
+                              maxWidth: "800px", 
+                              width: "100%", 
+                              display: "flex", 
+                              flexDirection: "column", 
+                              gap: "1.25rem",
+                              position: "relative"
+                            }} onClick={e => e.stopPropagation()}>
+                              <button 
+                                onClick={() => setSelectedWikiImg(null)}
+                                style={{ position: "absolute", right: "15px", top: "15px", background: "none", border: "none", color: "#FFF", fontSize: "1.5rem", cursor: "pointer" }}
+                              >
+                                &times;
+                              </button>
+
+                              <h3 style={{ fontSize: "1.2rem", fontWeight: 600, color: "#FFF", paddingRight: "2rem" }}>
+                                {selectedWikiImg.title}
+                              </h3>
+
+                              <div style={{ 
+                                background: "#111827", 
+                                borderRadius: "8px", 
+                                padding: "1rem", 
+                                display: "flex", 
+                                alignItems: "center", 
+                                justifyContent: "center",
+                                minHeight: "300px",
+                                maxHeight: "50vh"
+                              }}>
+                                <img 
+                                  src={selectedWikiImg.url} 
+                                  alt={selectedWikiImg.title} 
+                                  style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
+                                />
+                              </div>
+
+                              <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                                <a 
+                                  href={selectedWikiImg.descriptionUrl} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer" 
+                                  className="btn btn-secondary"
+                                  style={{ fontSize: "0.85rem", padding: "0.6rem 1.25rem", textDecoration: "none" }}
+                                >
+                                  <ExternalLink size={14} /> View License & Source
+                                </a>
+                                <a 
+                                  href={selectedWikiImg.url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer" 
+                                  className="btn btn-primary"
+                                  style={{ fontSize: "0.85rem", padding: "0.6rem 1.25rem", textDecoration: "none" }}
+                                >
+                                  📥 Open Original Diagram
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="glass-card" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem", padding: "4rem 2rem", textAlign: "center" }}>
+                        <div style={{ fontSize: "2rem" }}>🔍</div>
+                        <h3 style={{ fontSize: "1.1rem", color: "#FFF" }}>No verified diagrams found</h3>
+                        <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", maxWidth: "400px" }}>
+                          We couldn't locate matching diagrams for this topic on Wikimedia. Try refining your topic name or query again.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 

@@ -220,3 +220,35 @@ export async function refineContent(provider, apiKey, originalData, query, refin
   const jsonString = clean.slice(startIndex, endIndex + 1);
   return JSON.parse(jsonString);
 }
+
+export async function fetchWikiDiagrams(topic) {
+  try {
+    const query = encodeURIComponent(`${topic} diagram`);
+    const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${query}&gsrnamespace=6&prop=imageinfo&iiprop=url&format=json&origin=*&gsrlimit=12`;
+    const response = await fetch(url);
+    if (!response.ok) return [];
+    
+    const data = await response.json();
+    const pages = data.query?.pages || {};
+    
+    return Object.values(pages)
+      .map(p => {
+        const info = p.imageinfo?.[0];
+        return {
+          id: p.pageid,
+          title: p.title.replace(/^File:/, "").replace(/\.[a-zA-Z0-9]+$/, "").replace(/_/g, " "),
+          url: info?.url,
+          descriptionUrl: info?.descriptionurl,
+        };
+      })
+      .filter(r => r.url && (
+        r.url.endsWith(".svg") || 
+        r.url.endsWith(".png") || 
+        r.url.endsWith(".jpg") || 
+        r.url.endsWith(".jpeg")
+      ));
+  } catch (err) {
+    console.error("Wikimedia Commons search failed:", err);
+    return [];
+  }
+}
