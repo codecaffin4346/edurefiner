@@ -65,7 +65,7 @@ Return ONLY valid JSON. No markdown code fences, no extra text outside the JSON.
   "key_learning_points": ["${counts.key_points} containing standard curriculum core concepts"],
   "important_facts": ["${counts.facts}"],
   "real_world_applications": [{"category":"Daily Life|Technology|Science|Industry|Healthcare|Business","description":"How it applies"}],
-  "image_prompt": "A detailed descriptive prompt explaining what an educational diagram should visually show. The diagram must be suited for 6th to 12th Standard school textbooks, featuring clean, properly aligned flowcharts or diagrams.",
+  "image_prompt": "A detailed, descriptive text-to-image prompt (for Stable Diffusion) describing a high-quality educational illustration, diagram, or photograph representing the topic. Keep it highly visual and descriptive, specifying style (e.g., realistic textbook illustration, 3D render, microscopic view, or field photograph), key subjects, layout, colors, and lighting. Do NOT ask for labels or text within the image as AI image generators cannot render them correctly.",
   "practice_questions": {"easy":["2 questions matching school exam format"],"medium":["2 questions"],"advanced":["1 question"]},
   "youtube_queries": ["2-3 optimized search strings to find video lectures aligned with school syllabus"],
   "resource_queries": {"khan_academy":"search query","wikipedia":"search query","britannica":"search query"},

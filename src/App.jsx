@@ -15,7 +15,8 @@ import {
   ChevronRight,
   ListTodo,
   ExternalLink,
-  RefreshCw
+  RefreshCw,
+  Image
 } from "lucide-react";
 import { CHIPS, PIPELINE_STEPS, PROVIDERS, generateContent, generateSVG, refineContent } from "./utils/ai";
 import InteractiveSvg from "./components/InteractiveSvg";
@@ -38,6 +39,9 @@ export default function App() {
   // Results
   const [data, setData] = useState(null);
   const [svgDiagram, setSvgDiagram] = useState(null);
+  const [generatedImage, setGeneratedImage] = useState("");
+  const [imageSeed, setImageSeed] = useState(12345);
+  const [imageLoading, setImageLoading] = useState(false);
   const [history, setHistory] = useState([]);
   
   // Refinement Follow-up
@@ -111,6 +115,7 @@ export default function App() {
     setError("");
     setData(null);
     setSvgDiagram(null);
+    setGeneratedImage("");
     setPipelineState({});
     setStatusMsg(`Establishing connection to ${PROVIDERS[provider].name}...`);
 
@@ -125,6 +130,16 @@ export default function App() {
       setStatusMsg(`Analyzing query & generating ${lengthMode === "short" ? "short summary" : "detailed study guide"}...`);
       const responseData = await generateContent(provider, activeKey, activeQuery, lengthMode, model);
       setData(responseData);
+      
+      // Generate AI Illustration URL
+      if (responseData.image_prompt) {
+        const newSeed = Math.floor(Math.random() * 1000000);
+        setImageSeed(newSeed);
+        setImageLoading(true);
+        setGeneratedImage(`https://image.pollinations.ai/prompt/${encodeURIComponent(responseData.image_prompt)}?width=800&height=500&nologo=true&seed=${newSeed}`);
+      } else {
+        setGeneratedImage("");
+      }
       updatePipelineState("gen", "done");
 
       // Step 3: SVG Design
@@ -168,6 +183,12 @@ export default function App() {
       setStatusMsg("Refining content according to instruction...");
       const refinedData = await refineContent(provider, activeKey, data, query, instruction, model);
       setData(refinedData);
+      if (refinedData.image_prompt) {
+        const newSeed = Math.floor(Math.random() * 1000000);
+        setImageSeed(newSeed);
+        setImageLoading(true);
+        setGeneratedImage(`https://image.pollinations.ai/prompt/${encodeURIComponent(refinedData.image_prompt)}?width=800&height=500&nologo=true&seed=${newSeed}`);
+      }
       setRefinePrompt("");
     } catch (err) {
       setError(`Refinement failed: ${err.message}`);
@@ -496,6 +517,7 @@ export default function App() {
                 {[
                   { id: "concept", label: "Core Concept", icon: <BookOpen size={16} /> },
                   { id: "diagram", label: "Interactive Diagram", icon: <Globe size={16} /> },
+                  { id: "illustration", label: "AI Illustration", icon: <Image size={16} /> },
                   { id: "roadmap", label: "Roadmap & Application", icon: <Compass size={16} /> },
                   { id: "test", label: "Practice & Review", icon: <HelpCircle size={16} /> }
                 ].map(tab => (
@@ -562,13 +584,103 @@ export default function App() {
                 {/* 2. SVG Diagram */}
                 {activeTab === "diagram" && (
                   <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-                    {svgDiagram ? (
-                      <InteractiveSvg svgContent={svgDiagram} topic={data.topic} />
+                     {svgDiagram ? (
+                       <InteractiveSvg svgContent={svgDiagram} topic={data.topic} />
+                     ) : (
+                       <div className="glass-card" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem", padding: "4rem 2rem", textAlign: "center" }}>
+                         <div style={{ fontSize: "2rem" }}>🖼</div>
+                         <h3 style={{ fontSize: "1.1rem", color: "#FFF" }}>Diagram Not Available</h3>
+                         <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)" }}>Diagram creation failed or was skipped during execution.</p>
+                       </div>
+                     )}
+                  </div>
+                )}
+
+                {/* 3. AI Illustration */}
+                {activeTab === "illustration" && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+                    {generatedImage ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+                        <div className="glass-card" style={{ position: "relative", overflow: "hidden", minHeight: "350px", display: "flex", alignItems: "center", justifyContent: "center", background: "#111827", borderRadius: "var(--radius-md)" }}>
+                          {imageLoading && (
+                            <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "rgba(17, 24, 39, 0.8)", zIndex: 5, gap: "1rem" }}>
+                              <Loader2 size={36} className="animate-spin" style={{ color: "var(--primary)" }} />
+                              <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>Drawing illustration from prompt...</span>
+                            </div>
+                          )}
+                          <img 
+                            src={generatedImage} 
+                            alt={data.topic} 
+                            onLoad={() => setImageLoading(false)}
+                            onError={() => setImageLoading(false)}
+                            style={{ maxWidth: "100%", maxHeight: "500px", objectFit: "contain", display: "block", borderRadius: "6px" }}
+                          />
+                        </div>
+                        
+                        {/* Controls and Prompt Display */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                          {/* Action Buttons */}
+                          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+                            <button 
+                              onClick={() => {
+                                const newSeed = Math.floor(Math.random() * 1000000);
+                                setImageSeed(newSeed);
+                                setImageLoading(true);
+                                setGeneratedImage(`https://image.pollinations.ai/prompt/${encodeURIComponent(data.image_prompt)}?width=800&height=500&nologo=true&seed=${newSeed}`);
+                              }}
+                              className="btn btn-secondary"
+                              style={{ fontSize: "0.85rem", padding: "0.6rem 1.25rem", borderRadius: "8px" }}
+                            >
+                              <RefreshCw size={14} /> Regenerate Variation
+                            </button>
+                            <a 
+                              href={generatedImage} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="btn btn-secondary"
+                              style={{ fontSize: "0.85rem", padding: "0.6rem 1.25rem", borderRadius: "8px", textDecoration: "none" }}
+                            >
+                              <ExternalLink size={14} /> Open in New Tab
+                            </a>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  const response = await fetch(generatedImage);
+                                  const blob = await response.blob();
+                                  const url = window.URL.createObjectURL(blob);
+                                  const a = document.createElement("a");
+                                  a.href = url;
+                                  a.download = `${data.topic.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-illustration.jpg`;
+                                  document.body.appendChild(a);
+                                  a.click();
+                                  document.body.removeChild(a);
+                                  window.URL.revokeObjectURL(url);
+                                } catch (err) {
+                                  console.error("Failed to download image:", err);
+                                  window.open(generatedImage, "_blank");
+                                }
+                              }}
+                              className="btn btn-primary"
+                              style={{ fontSize: "0.85rem", padding: "0.6rem 1.25rem", borderRadius: "8px" }}
+                            >
+                              📥 Download Illustration
+                            </button>
+                          </div>
+
+                          {/* Prompt detail */}
+                          <div className="glass-card" style={{ background: "rgba(255, 255, 255, 0.02)" }}>
+                            <h4 style={{ fontSize: "0.9rem", fontWeight: 600, color: "#FFF", marginBottom: "0.5rem" }}>AI Illustration Prompt</h4>
+                            <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontStyle: "italic", lineHeight: "1.5" }}>
+                              "{data.image_prompt}"
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     ) : (
                       <div className="glass-card" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem", padding: "4rem 2rem", textAlign: "center" }}>
                         <div style={{ fontSize: "2rem" }}>🖼</div>
-                        <h3 style={{ fontSize: "1.1rem", color: "#FFF" }}>Diagram Not Available</h3>
-                        <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)" }}>Diagram creation failed or was skipped during execution.</p>
+                        <h3 style={{ fontSize: "1.1rem", color: "#FFF" }}>Illustration Not Available</h3>
+                        <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)" }}>No image prompt was generated for this topic.</p>
                       </div>
                     )}
                   </div>
