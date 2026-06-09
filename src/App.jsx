@@ -149,7 +149,7 @@ export default function App() {
         setImageLoading(true);
         setImageError(false);
         const keyParam = pollinationsKey ? `&key=${encodeURIComponent(pollinationsKey)}` : "";
-        setGeneratedImage(`https://image.pollinations.ai/prompt/${encodeURIComponent(responseData.image_prompt)}?width=800&height=500&nologo=true&seed=${newSeed}${keyParam}`);
+        setGeneratedImage(`https://gen.pollinations.ai/image/${encodeURIComponent(responseData.image_prompt)}?width=800&height=500&nologo=true&seed=${newSeed}${keyParam}`);
       } else {
         setGeneratedImage("");
       }
@@ -210,7 +210,7 @@ export default function App() {
         setImageLoading(true);
         setImageError(false);
         const keyParam = pollinationsKey ? `&key=${encodeURIComponent(pollinationsKey)}` : "";
-        setGeneratedImage(`https://image.pollinations.ai/prompt/${encodeURIComponent(refinedData.image_prompt)}?width=800&height=500&nologo=true&seed=${newSeed}${keyParam}`);
+        setGeneratedImage(`https://gen.pollinations.ai/image/${encodeURIComponent(refinedData.image_prompt)}?width=800&height=500&nologo=true&seed=${newSeed}${keyParam}`);
       }
       
       // Re-fetch Verified Wiki Diagrams
@@ -864,7 +864,7 @@ export default function App() {
                                 setImageLoading(true);
                                 setImageError(false);
                                 const keyParam = pollinationsKey ? `&key=${encodeURIComponent(pollinationsKey)}` : "";
-                                setGeneratedImage(`https://image.pollinations.ai/prompt/${encodeURIComponent(data.image_prompt)}?width=800&height=500&nologo=true&seed=${newSeed}${keyParam}`);
+                                setGeneratedImage(`https://gen.pollinations.ai/image/${encodeURIComponent(data.image_prompt)}?width=800&height=500&nologo=true&seed=${newSeed}${keyParam}`);
                               }}
                               className="btn btn-secondary"
                               style={{ fontSize: "0.85rem", padding: "0.6rem 1.25rem", borderRadius: "8px" }}
