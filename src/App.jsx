@@ -42,6 +42,8 @@ export default function App() {
   const [generatedImage, setGeneratedImage] = useState("");
   const [imageSeed, setImageSeed] = useState(12345);
   const [imageLoading, setImageLoading] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [pollinationsKey, setPollinationsKey] = useState("");
   const [history, setHistory] = useState([]);
   
   // Refinement Follow-up
@@ -65,6 +67,9 @@ export default function App() {
 
     const savedSambaKey = localStorage.getItem("edu_sambanova_token");
     if (savedSambaKey) setSambanovaKey(savedSambaKey);
+
+    const savedPollinationsKey = localStorage.getItem("edu_pollinations_token");
+    if (savedPollinationsKey) setPollinationsKey(savedPollinationsKey);
 
     const savedHistory = localStorage.getItem("edu_query_history");
     if (savedHistory) {
@@ -136,7 +141,9 @@ export default function App() {
         const newSeed = Math.floor(Math.random() * 1000000);
         setImageSeed(newSeed);
         setImageLoading(true);
-        setGeneratedImage(`https://image.pollinations.ai/prompt/${encodeURIComponent(responseData.image_prompt)}?width=800&height=500&nologo=true&seed=${newSeed}`);
+        setImageError(false);
+        const keyParam = pollinationsKey ? `&key=${encodeURIComponent(pollinationsKey)}` : "";
+        setGeneratedImage(`https://image.pollinations.ai/prompt/${encodeURIComponent(responseData.image_prompt)}?width=800&height=500&nologo=true&seed=${newSeed}${keyParam}`);
       } else {
         setGeneratedImage("");
       }
@@ -187,7 +194,9 @@ export default function App() {
         const newSeed = Math.floor(Math.random() * 1000000);
         setImageSeed(newSeed);
         setImageLoading(true);
-        setGeneratedImage(`https://image.pollinations.ai/prompt/${encodeURIComponent(refinedData.image_prompt)}?width=800&height=500&nologo=true&seed=${newSeed}`);
+        setImageError(false);
+        const keyParam = pollinationsKey ? `&key=${encodeURIComponent(pollinationsKey)}` : "";
+        setGeneratedImage(`https://image.pollinations.ai/prompt/${encodeURIComponent(refinedData.image_prompt)}?width=800&height=500&nologo=true&seed=${newSeed}${keyParam}`);
       }
       setRefinePrompt("");
     } catch (err) {
@@ -290,6 +299,32 @@ export default function App() {
               <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: activeKey.length > 8 ? "var(--secondary)" : "var(--text-muted)", display: "inline-block" }} />
               <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
                 {activeKey.length > 8 ? "Token active locally" : "Token required"}
+              </span>
+            </div>
+          </div>
+
+          <div className="input-group" style={{ marginTop: "0.25rem" }}>
+            <label className="input-label" htmlFor="pollinations-token-input">
+              Pollinations AI Key (Optional)
+            </label>
+            <div style={{ position: "relative" }}>
+              <input
+                id="pollinations-token-input"
+                type={showKey ? "text" : "password"}
+                value={pollinationsKey}
+                onChange={e => {
+                  setPollinationsKey(e.target.value);
+                  localStorage.setItem("edu_pollinations_token", e.target.value);
+                }}
+                placeholder="Paste Pollinations Key..."
+                className="input-control"
+                style={{ width: "100%", paddingRight: "2.5rem" }}
+              />
+            </div>
+            <div style={{ display: "flex", gap: "4px", alignItems: "center", marginTop: "4px" }}>
+              <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: pollinationsKey.length > 5 ? "var(--secondary)" : "var(--text-muted)", display: "inline-block" }} />
+              <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                {pollinationsKey.length > 5 ? "Key active locally" : "Uses free keyless pool (subject to rate-limits)"}
               </span>
             </div>
           </div>
@@ -608,13 +643,35 @@ export default function App() {
                               <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>Drawing illustration from prompt...</span>
                             </div>
                           )}
-                          <img 
-                            src={generatedImage} 
-                            alt={data.topic} 
-                            onLoad={() => setImageLoading(false)}
-                            onError={() => setImageLoading(false)}
-                            style={{ maxWidth: "100%", maxHeight: "500px", objectFit: "contain", display: "block", borderRadius: "6px" }}
-                          />
+                          
+                          {imageError ? (
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem", padding: "3rem 2rem", textAlign: "center", zIndex: 6 }}>
+                              <span style={{ fontSize: "2.5rem" }}>⚠️</span>
+                              <h3 style={{ fontSize: "1.1rem", color: "#FFF", fontWeight: 600 }}>API Limit / Authentication Required</h3>
+                              <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", maxWidth: "480px", lineHeight: "1.6" }}>
+                                The free public pool for Pollinations AI has exhausted its balance or has rate-limited your IP address.
+                              </p>
+                              <div style={{ background: "rgba(255, 255, 255, 0.03)", border: "1px solid var(--border-color)", borderRadius: "8px", padding: "1rem 1.25rem", fontSize: "0.85rem", color: "var(--text-secondary)", textAlign: "left", maxWidth: "480px", lineHeight: "1.5" }}>
+                                <strong style={{ color: "#FFF", display: "block", marginBottom: "0.5rem" }}>To fix this:</strong>
+                                1. Go to <strong><a href="https://enter.pollinations.ai" target="_blank" rel="noopener noreferrer" style={{ color: "var(--primary)", textDecoration: "underline" }}>enter.pollinations.ai</a></strong> and sign in (free and instant) to get your API key.
+                                <br />
+                                2. Paste your key into the <strong>Pollinations AI Key</strong> input in the settings panel.
+                                <br />
+                                3. Click the <strong>Regenerate Variation</strong> button below to draw the illustration.
+                              </div>
+                            </div>
+                          ) : (
+                            <img 
+                              src={generatedImage} 
+                              alt={data.topic} 
+                              onLoad={() => setImageLoading(false)}
+                              onError={() => {
+                                setImageLoading(false);
+                                setImageError(true);
+                              }}
+                              style={{ maxWidth: "100%", maxHeight: "500px", objectFit: "contain", display: "block", borderRadius: "6px" }}
+                            />
+                          )}
                         </div>
                         
                         {/* Controls and Prompt Display */}
@@ -626,7 +683,9 @@ export default function App() {
                                 const newSeed = Math.floor(Math.random() * 1000000);
                                 setImageSeed(newSeed);
                                 setImageLoading(true);
-                                setGeneratedImage(`https://image.pollinations.ai/prompt/${encodeURIComponent(data.image_prompt)}?width=800&height=500&nologo=true&seed=${newSeed}`);
+                                setImageError(false);
+                                const keyParam = pollinationsKey ? `&key=${encodeURIComponent(pollinationsKey)}` : "";
+                                setGeneratedImage(`https://image.pollinations.ai/prompt/${encodeURIComponent(data.image_prompt)}?width=800&height=500&nologo=true&seed=${newSeed}${keyParam}`);
                               }}
                               className="btn btn-secondary"
                               style={{ fontSize: "0.85rem", padding: "0.6rem 1.25rem", borderRadius: "8px" }}
@@ -661,6 +720,7 @@ export default function App() {
                                 }
                               }}
                               className="btn btn-primary"
+                              disabled={imageError}
                               style={{ fontSize: "0.85rem", padding: "0.6rem 1.25rem", borderRadius: "8px" }}
                             >
                               📥 Download Illustration
